@@ -1,0 +1,308 @@
+from django.db import models
+from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import BaseUserManager
+from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
+from django.dispatch import receiver
+from django.urls import reverse
+from django.utils import timezone
+from master_data.models import Currency, Language, DateFormat
+from django_rest_passwordreset.signals import reset_password_token_created
+
+from django.contrib.auth.models import User, Group
+
+#  sending emails to password tokn
+
+
+@receiver(reset_password_token_created)
+def password_reset_token_created(
+                                 reset_password_token,
+                                 *args, **kwargs):
+    """Handle the creation of a password reset token and send an email notification."""
+
+    email_plaintext_message = "{}?token={}".format(
+        reverse('password_reset:reset-password-request'), reset_password_token.key)
+
+    send_mail(
+        # title:
+        "Password Reset for {title}".format(title="Some website title"),
+        # message:
+        email_plaintext_message,
+        # from:
+        "noreply@somehost.local",
+        # to:
+        [reset_password_token.user.email]
+    )
+
+# end
+
+
+class Permission(models.Model):
+    """Model to represent permissions in the system."""
+
+    permission_id = models.AutoField(primary_key=True)
+    permission = models.CharField(max_length=255)
+    status = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        """Validate the permission instance."""
+        if not self.permission:
+            raise ValidationError('Please write a valid permission name.')
+        if self.status not in [True, False]:
+            raise ValidationError('Invalid status value. Status must be either True or False.')
+
+    def __str__(self):
+        return self.permission
+    
+class Country(models.Model):
+    """Model to represent Country in the system."""
+
+    country_id = models.AutoField(primary_key=True)
+    country = models.CharField(max_length=30)
+    status = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        """Validate the permission instance."""
+        if not self.country:
+            raise ValidationError('Country is required.')
+
+    def __str__(self):
+        return self.country
+
+    class Meta:
+        """Model to represent Meta in the system."""
+
+        verbose_name_plural = "Countries"
+
+class Customer(models.Model):
+    """Model to represent Customer in the system."""
+
+    customer_id = models.AutoField(primary_key=True)
+    company_url = models.CharField(max_length=100)
+    company_name = models.CharField(max_length=200)
+    company_address = models.TextField()
+    contact_number = models.CharField(max_length=14)
+    country = models.ForeignKey(Country, on_delete=models.CASCADE)
+    gst_tax_number = models.CharField(max_length=10)
+    company_logo_url = models.CharField(max_length=100)
+    company_image = models.ImageField(upload_to='company_images/')
+    contact_name = models.CharField(max_length=200)
+    contact_email = models.EmailField(max_length=50)
+    contact_phone_number = models.CharField(max_length=14)
+    licence_type = models.CharField(max_length=8)
+    licence_start_date = models.DateField()
+    licence_end_date = models.DateField()
+    licence_user_quantity = models.IntegerField()
+    status = models.BooleanField(default=True)
+    is_social_login_enabled = models.BooleanField(default=False)
+    unique_id = models.CharField(max_length=20)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    city = models.CharField(max_length=50)
+    state = models.CharField(max_length=50)
+    org_admin_email = models.EmailField(max_length=50)
+    org_admin_full_name = models.CharField(max_length=100)
+    org_admin_contact_number = models.CharField(max_length=14)
+    contract_manager_email = models.EmailField(max_length=50)
+    contract_manager_full_name = models.CharField(max_length=100)
+    contract_manager_contact_number = models.CharField(max_length=14)
+
+    def clean(self):
+        """Validate the permission instance."""
+        if not self.company_url:
+            raise ValidationError('company url is required.')
+        if not self.company_name:
+            raise ValidationError('Company name is required.')
+        if not self.licence_type:
+            raise ValidationError('licence type is required.')
+        if not self.licence_start_date:
+            raise ValidationError('licence start date is required.')
+        if not self.licence_end_date:
+            raise ValidationError('licence end date is required.')
+        if not self.licence_user_quantity:
+            raise ValidationError('licence user quantity is required.')
+
+    def __str__(self):
+        return self.company_name
+
+
+class Role(models.Model):
+    """Model to represent Role in the system."""
+
+    ROLE_TYPES = (
+        ('ContractManagement', 'Contract Management'),
+        ('OperationalManagement', 'Operational Management'),
+    )
+
+    role_id = models.AutoField(primary_key=True)
+    role_name = models.CharField(max_length=50)
+    role_type = models.CharField(max_length=200, choices=ROLE_TYPES)
+    description = models.TextField()
+    status = models.BooleanField(default=True)
+    customer_id = models.ForeignKey(Customer, on_delete=models.CASCADE, null=True)  # Updated null=True
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        """Validate the role instance."""
+        if self.status not in [True, False]:
+            raise ValidationError('Invalid status value. Status must be either True or False.')
+        if self.created_at and self.created_at >= timezone.now():
+            raise ValidationError('Created at date cannot be in the future.')
+
+    def __str__(self):
+        return self.role_name
+
+class RolePermission(models.Model):
+    """Model to represent Role-Permission mapping in the system."""
+
+    role_permission_id = models.AutoField(primary_key=True)
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, null=False)
+    permission = models.ForeignKey(Permission, on_delete=models.CASCADE, null=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __int__(self):
+        return self.role_permission_id
+
+class UserManager(BaseUserManager):
+    """Model to represent User Manger in the system."""
+
+    def create_user(self, email, password=None, **extra_fields):
+        """Model to represent Create user in the system."""
+        if not email:
+            raise ValueError("The Email field must be set.")
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, password=None, **extra_fields):
+        """Model to represent Create superuser in the system."""
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        return self.create_user(email, password, **extra_fields)
+
+
+class User(AbstractUser):
+    """Model to represent user in the system."""
+    user_id = models.AutoField(primary_key=True)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    email = models.EmailField(max_length=50, unique=True)
+    status = models.BooleanField(default=False, null=True)
+    ###################### Janith 07.04 ##########################################################
+    customer_id = models.ForeignKey(
+        Customer, on_delete=models.CASCADE, null=True)
+    ###################### End ###################################################################
+    contact_phone_number = models.CharField(max_length=14, null=True)
+    department = models.CharField(max_length=50, null=True)
+    language_id = models.ForeignKey(
+        Language, on_delete=models.CASCADE, null=True)
+    currency_id = models.ForeignKey(
+        Currency, on_delete=models.CASCADE, null=True)
+    date_format_id = models.ForeignKey(
+        DateFormat, on_delete=models.CASCADE, null=True)
+    password_reset_token = models.CharField(max_length=100, null=True)
+    password_reset_token_sent_at = models.DateTimeField(null=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    ############## Anura 19/06/2023 ###################
+    organization_name = models.CharField(max_length=100)
+    #################### End ##########################
+    groups = models.ManyToManyField('Group', null=True)
+    roles = models.ManyToManyField(Role, through='UserRole', null=True)
+    user_permissions = models.ManyToManyField(
+        Permission,
+        verbose_name='user permissions',
+        blank=True,
+        related_name='customer_and_user_permissions', null=True
+    )
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = []
+    objects = UserManager()
+    def save(self, *args, **kwargs):
+        if not self.username:  # Only set the username if it is not already specified
+            self.username = self.email
+    ##################### Anura 21/06/2023 ######################
+    # Encrypt the password if it is set or modified
+        # if self.password:
+        #     self.set_password(self.password)
+    ########################## End ##############################
+        # super().save(*args, **kwargs)
+    # def save(self, *args, **kwargs):
+    #     if not self.username:
+    #         self.username = self.email
+
+        if not self.pk and not self.password:
+            # Only set the password if the user is being created and password is not set
+            self.set_password('random_password')
+
+        super().save(*args, **kwargs)
+        
+class UserRole(models.Model):
+    """Model to represent Role in the system."""
+
+    user_role_id = models.AutoField(primary_key=True, null=False)
+    user_id = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
+    role_id = models.ForeignKey(Role, on_delete=models.CASCADE, null=False)
+    status = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __int__(self):
+        return self.user_role_id
+
+
+class Group(models.Model):
+    """Model to represent Group in the system."""
+
+    group_id = models.AutoField(primary_key=True, null=False)
+    group_name = models.CharField(max_length=255, null=False)
+    description = models.TextField()
+    status = models.BooleanField(null=False)
+    customer_id = models.ForeignKey(
+        Customer, on_delete=models.CASCADE, null=False)
+    created_at = models.DateTimeField(auto_now_add=True, null=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        """Vallidation error representing."""
+        if not self.group_name:
+            raise ValidationError('Group Name  is required.')
+
+    def __str__(self):
+        return self.group_name
+
+
+class GroupRole(models.Model):
+    """Model to represent   Group Role in the system."""
+    group_role_id = models.AutoField(primary_key=True)
+    group_id = models.ForeignKey(Group, on_delete=models.CASCADE)
+    role_id = models.ForeignKey(Role, on_delete=models.CASCADE)
+    status = models.BooleanField(null=False)
+    created_at = models.DateTimeField(auto_now_add=True, null=False)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_group_lead = models.BooleanField(null=False)
+
+
+class UserGroup(models.Model):
+    """Model to represent User Role in the system."""
+    user_group_id = models.AutoField(primary_key=True)
+    user_id = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
+    group_id = models.ForeignKey(Group, on_delete=models.CASCADE, null=False)
+    status = models.BooleanField(null=False)
+    created_at = models.DateTimeField(auto_now_add=True,null=False)
+    updated_at = models.DateTimeField(auto_now=True)        
+    is_group_lead = models.BooleanField()
+
+
+
+    def clean(self):
+        """Validate the permission instance."""
+        if self.created_at and self.created_at >= timezone.now():
+            raise ValidationError('Created at date cannot be in the future.')

@@ -1,0 +1,36 @@
+from counterparty.models import (
+    Counterparty, CounterpartyContact, CustomerCounterpartyContact
+)
+from rest_framework import serializers
+
+
+class CountrypartySerializer(serializers.ModelSerializer):
+    """Serializer for the Counterparty model."""
+    
+    ################## Anura 20/06/2023 ##################
+    user_count = serializers.IntegerField(read_only=True)
+    ######################### End ########################
+    class Meta:
+        """Serializer for the Counterparty model."""
+        model = Counterparty
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+class CustomerCounterpartyContractSerializer(serializers.ModelSerializer):
+    """Serializer for the CustomerCounterpartyContract model."""
+
+    class Meta:
+        """Serializer for the CustomerCounterpartyContact model."""
+
+        model = CustomerCounterpartyContact
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+class CounterpartyContractSerializer(serializers.ModelSerializer):
+    """Serializer for the CounterpartyContact model."""
+
+    class Meta:
+        """Serializer for the CounterpartyContact model."""
+
+        model = CounterpartyContact
+        fields = '__all__'

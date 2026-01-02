@@ -1,0 +1,61 @@
+# =====================
+# Virtual Environments
+# =====================
+env/
+venv/
+ENV/
+.venv/
+.env/
+
+# =====================
+# Python cache
+# =====================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# =====================
+# Django stuff
+# =====================
+*.log
+db.sqlite3
+media/
+staticfiles/
+
+# =====================
+# Environment variables
+# =====================
+.env
+.env.*
+
+# =====================
+# IDE / Editor
+# =====================
+.vscode/
+.idea/
+*.swp
+
+# =====================
+# OS files
+# =====================
+.DS_Store
+Thumbs.db
+
+# =====================
+# Test / Coverage
+# =====================
+.coverage
+htmlcov/
+.pytest_cache/
+
+# =====================
+# Build / Distribution
+# =====================
+build/
+dist/
+*.egg-info/
+
+# =====================
+# Node / Frontend (if any)
+# =====================
+node_modules/

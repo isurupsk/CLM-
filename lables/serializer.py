@@ -1,0 +1,27 @@
+from lables.models import ContractFolder, ContractLabel, LabelMaster
+from rest_framework import serializers
+
+
+class LabelMasterSerializer(serializers.ModelSerializer):
+    """Serializer class for LabelMaster model."""
+
+    class Meta:
+        model = LabelMaster
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+class ContractLabelSerializer(serializers.ModelSerializer):
+    """Serializer class for ContractLabel model."""
+
+    class Meta:
+        model = ContractLabel
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
+
+class ContractFolderSerializer(serializers.ModelSerializer):
+    """Serializer class for ContractFolder model."""
+
+    class Meta:
+        model = ContractFolder
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at')
